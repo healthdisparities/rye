@@ -86,11 +86,17 @@ Options:
 ```
 
 ### Step 1: Computing eigenvalue/eigenvectors
-The following example is developed with 1000 Genomes Project data as example dataset.  Run PLINK command on vcf.gz file to generate the eigenvector/eigenvalue files
+The following example is developed with 1000 Genomes Project data as example dataset.  Run PLINK command on vcf.gz file to generate the eigenvector/eigenvalue files.
+
+For plink v1.9:
 ```
-plink --vcf ALL.chr22.phase3_shapeit2_mvncall_integrated_v5.20130502.genotypes.vcf.gz --pca 25 header tabs --out chr22_pca
+plink --vcf ALL.chr22.phase3_shapeit2_mvncall_integrated_v5.20130502.genotypes.vcf.gz --pca --out chr22_pca
 ```
 
+For plink v2.0
+```
+plink2 --vcf ALL.chr22.phase3_shapeit2_mvncall_integrated_v5.20130502.genotypes.vcf.gz --pca 20 --out chr22_pca
+```
 ### Step 2: Creating a population to group mapping file
 A population to group mapping file simply provides instructions on how to aggregate populations into groups (e.g., GBR and CEU into European or Western European groups).  
   
