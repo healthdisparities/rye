@@ -1,7 +1,7 @@
 #!/usr/bin/env Rscript
 script_author = "Andrew Conley, Lavanya Rishishwar"
 script_copyright = "Copyright 2021, Andrew Conley, Lavanya Rishishwar"
-script_credits = c("Andrew Conely", "Lavanya Rishishwar", "Shivam Sharma", "Emily Norris")
+script_credits = c("Andrew Conely", "Lavanya Rishishwar", "Maria Ahmad", "Shivam Sharma", "Emily Norris")
 script_license = "GPL"
 script_version = "0.1"
 script_maintainer = "Andrew Conley, Lavanya Rishishwar"
