@@ -31,6 +31,26 @@ printError = function(msg){cat(red(paste(msg, collapse = " "), "\n"))}
 printWarn = function(msg){cat(yellow(paste(msg, collapse = " "), "\n"))}
 logmsg = function(msg){cat(green(paste(format(Sys.time(), "[ %b %d %Y - %X ]"), msg, collapse = " "), "\n"))}
 progressmsg = function(msg){cat(magenta(paste(msg, collapse = " "), "\n"))}
+pretty_time = function(time){
+  out_string = ""
+  if(time > 60*60*24){
+    days = round(time/(60*60*24))
+    time = time %% (60*60*24)
+    out_string = paste0(out_string, days, " days, ")
+  }
+  if(time > 60*60){
+    hours = round(time/(60*60))
+    time = time %% (60*60)
+    out_string = paste0(out_string, hours, " hours, ")
+  }
+  if(time > 60){
+    mins = round(time/60)
+    time = time %% 60
+    out_string = paste0(out_string, mins, " mins, ")
+  }
+  out_string = paste0(out_string, round(time, 2), " seconds")
+  return(out_string)
+}
 
 rye.scale = function(X = NULL) {
   return(apply(X, 2, function(i){i = i - min(i); i / max(i)}))
@@ -174,7 +194,7 @@ rye.gibbs = function(X = NULL, fam = NULL, referenceGroups = NULL,
 rye.optimize = function(X = NULL, fam = NULL,
                         referencePops = NULL, referenceGroups = NULL,
                         alpha = NULL, optimizeAlpha = TRUE,
-                        weight = NULL, optimizeWeight = TRUE,
+                        weight = NULL, optimizeWeight = TRUE, attempts = 4,
                         iterations = 100, rounds = 25, threads = 1, startSD = 0.005, endSD = 0.001,
                         populationError = FALSE) {
   
@@ -199,12 +219,12 @@ rye.optimize = function(X = NULL, fam = NULL,
     
     sd = startSD - (startSD - endSD) * log(round)/log(rounds)
     if (threads > 1) {
-      params = mclapply(seq(threads), function(i) rye.gibbs(X = referenceX, fam = referenceFAM, referenceGroups = referenceGroups,
+      params = mclapply(seq(attempts), function(i) rye.gibbs(X = referenceX, fam = referenceFAM, referenceGroups = referenceGroups,
                                                             iterations = iterations,
                                                             alpha = alpha, weight = weight, sd = sd,
-                                                            optimizeAlpha = optimizeAlpha, optimizeWeight = optimizeWeight), mc.cores = 32)
+                                                            optimizeAlpha = optimizeAlpha, optimizeWeight = optimizeWeight), mc.cores = threads)
     } else {
-      params = lapply(seq(threads), function(i) rye.gibbs(X = referenceX, fam = referenceFAM, referenceGroups = referenceGroups,
+      params = lapply(seq(attempts), function(i) rye.gibbs(X = referenceX, fam = referenceFAM, referenceGroups = referenceGroups,
                                                           iterations = iterations,
                                                           alpha = alpha, weight = weight, sd = sd,
                                                           optimizeAlpha = optimizeAlpha, optimizeWeight = optimizeWeight))
@@ -241,7 +261,7 @@ rye.optimize = function(X = NULL, fam = NULL,
 rye = function(eigenvec_file = NULL, eigenval_file = NULL,
                pop2group_file = NULL, output_file = NULL,
                threads = 4, pcs = 20, optim_rounds = 200,
-               optim_iter = 100){
+               optim_iter = 100, attempts=4){
   ## Perform core operation
   #TODO: Change file reading method to data.table
   logmsg("Reading in Eigenvector file")
@@ -288,7 +308,7 @@ rye = function(eigenvec_file = NULL, eigenval_file = NULL,
                            referencePops = referencePops, referenceGroups = referenceGroups,
                            startSD = 0.01, endSD = 0.005,
                            threads = threads, iterations = optim_iter,
-                           rounds = optim_rounds, 
+                           rounds = optim_rounds, attempts=attempts,
                            weight = scaledWeight, alpha = unifAlpha, 
                            optimizeWeight = TRUE, optimizeAlpha = TRUE)
   optWeight = optParams[[3]]
@@ -385,7 +405,9 @@ optionList = list(
               metavar = '<optim-rounds>'),
   make_option('--iter', type = 'numeric', default = 100,
               help = 'Number of iterations to use for optimization (higher number = more accurate but slower; Default=100)',
-              metavar = '<optim-iters>')
+              metavar = '<optim-iters>'),
+  make_option('--attempts', type = 'numeric', default = 4,
+              help = 'Number of attempts to find the optimum values (Default = 4)', metavar = '<ATTEMPTS>')
 )
 
 optParser = OptionParser(option_list = optionList)
@@ -395,16 +417,21 @@ opt = parse_args(optParser)
 #                                      "--eigenval=extractedChrAllPrunedNoSan.25.eigenval",
 #                                      "--pop2group=pop2group.txt"))
 # print(opt)
+start_time <- proc.time()
 logmsg("Parsing user supplied arguments...")
 validate_arguments(opt)
 logmsg("Arguments passed validation")
-logmsg("Running core rye")
+logmsg(paste0("Running core rye with ", opt$threads, " threads"))
 rye(eigenvec_file = opt$eigenvec,
     eigenval_file = opt$eigenval,
     pop2group_file = opt$pop2group,
     output_file = opt$output,
     threads = opt$threads,
+    attempts = opt$attempts,
     pcs = opt$pcs,
     optim_rounds = opt$rounds,
     optim_iter = opt$iter)
 logmsg("Process completed")
+end_time <- proc.time() - start_time
+logmsg(end_time)
+logmsg(paste0("The process took ", pretty_time(end_time["user.self"])))
