@@ -78,6 +78,7 @@ rye.populationMeans = function(X = NULL, fam = NULL, alpha = NULL, weight = NULL
   return(means)
 }
 
+
 rye.predict = function(X = NULL, means = NULL, weight = NULL, referenceGroups = NULL) {
   
   estimates = t(apply(t(t(X) * weight), 1, function(i){c = coef(nnls(A= as.matrix(t(means)), b = i)); c / sum(c)}))
@@ -90,7 +91,7 @@ rye.predict = function(X = NULL, means = NULL, weight = NULL, referenceGroups = 
   return(estimates)
 }
 
-ruye.squaredError = function(expected = NULL, predicted = NULL) {
+rye.squaredError = function(expected = NULL, predicted = NULL) {
   return((expected - predicted) ** 2)
 }
 
@@ -98,10 +99,12 @@ rye.absoluteError = function(expected = NULL, predicted = NULL) {
   return(abs(expected - predicted))
 }
 
+
 rye.gibbs = function(X = NULL, fam = NULL, referenceGroups = NULL, 
                      alpha = NULL, optimizeAlpha = TRUE,
+                     alphaSD = 0.01, weightSD = 0.001,
                      weight = NULL, optimizeWeight = TRUE,
-                     iterations = 100, sd = 0.0001) {
+                     iterations = 100) {
   
   pops = names(alpha)
   
@@ -124,7 +127,7 @@ rye.gibbs = function(X = NULL, fam = NULL, referenceGroups = NULL,
   ## Get the starting error
   means = rye.populationMeans(X = X, fam = fam, alpha = alpha, weight = weight, referenceGroups = referenceGroups)[pops, ]
   predicted = rye.predict(X = X, means = means, weight = weight, referenceGroups = referenceGroups)
-  oldError = rye.absoluteError(expected = expected, predicted = predicted)
+  oldError = rye.squaredError(expected = expected, predicted = predicted)
   oldError = cbind(apply(oldError, 1, mean))
   oldError = aggregate(oldError, by = list(fam[ , 'group']), mean)
   oldError = oldError[ , -1]
@@ -133,33 +136,28 @@ rye.gibbs = function(X = NULL, fam = NULL, referenceGroups = NULL,
   ## Return values
   minError = oldError
   minParams = list(minError, alpha, weight, means, predicted)
-  
-  ## Momentum between iterations
-  alphaMomentum = rep(0, length(alpha))
-  weightMomentum = rep(0, length(weight))
-  momentum = 1/10
-  
+    
   for (iteration in seq(iterations)) {
     
     ## Pick new alpha and weight for this iteration
     newAlpha = alpha
     if (optimizeAlpha) {
       toUpdate = sample(seq(length(newAlpha)))[1]
-      newAlpha[toUpdate] = newAlpha[toUpdate] + rnorm(n = 1, sd = (abs(newAlpha[toUpdate]) + 0.001) * sd) + alphaMomentum[toUpdate]
-      newAlpha[newAlpha < 0] = 0
+      newAlpha[toUpdate] = newAlpha[toUpdate] + rnorm(mean = (-1 * (alphaSD * newAlpha[toUpdate])), n = 1, sd = alphaSD)
     }
-    
+      
     newWeight = weight
     if (optimizeWeight) {
       toUpdate = sample(seq(length(newWeight)))[1]
-      newWeight[toUpdate] = newWeight[toUpdate] + rnorm(n = 1, sd = (newWeight[toUpdate] + 0.001) * sd) + weightMomentum[toUpdate]
+      newWeight[toUpdate] = newWeight[toUpdate] + rnorm(mean = (-1 * (weightSD * newWeight[toUpdate])), n = 1, sd = weightSD)
       newWeight[newWeight < 0] = 0
+      newWeight = newWeight / sum(newWeight)
     }
     
     ## Find the new errors
     means = rye.populationMeans(X = X, fam = fam, alpha = newAlpha, weight = newWeight, referenceGroups = referenceGroups)[pops, ]
     predicted = rye.predict(X = X, means = means, weight = newWeight, referenceGroups = referenceGroups)
-    newError = rye.absoluteError(expected = expected, predicted = predicted)
+    newError = rye.squaredError(expected = expected, predicted = predicted)
     newError = cbind(apply(newError, 1, mean))
     newError = aggregate(newError, by = list(fam[ , 'group']), mean)
     newError = newError[ , -1]
@@ -178,8 +176,6 @@ rye.gibbs = function(X = NULL, fam = NULL, referenceGroups = NULL,
     ## See if we jump
     if (runif(n = 1, min = 0, max = 1) < odds[1]) {
       oldError = newError
-      alphaMomentum = (alphaMomentum / 2) + ((newAlpha - alpha) * momentum)
-      weightMomentum = (weightMomentum / 2) + ((newWeight - weight) * momentum)
       alpha = newAlpha
       weight = newWeight
     }
@@ -192,11 +188,14 @@ rye.gibbs = function(X = NULL, fam = NULL, referenceGroups = NULL,
 
 
 rye.optimize = function(X = NULL, fam = NULL,
-                        referencePops = NULL, referenceGroups = NULL,
-                        alpha = NULL, optimizeAlpha = TRUE,
-                        weight = NULL, optimizeWeight = TRUE, attempts = 4,
-                        iterations = 100, rounds = 25, threads = 1, startSD = 0.005, endSD = 0.001,
-                        populationError = FALSE) {
+                    referencePops = NULL, referenceGroups = NULL,
+                    alpha = NULL, optimizeAlpha = TRUE,
+                    weight = NULL, optimizeWeight = TRUE,
+                    attempts = 100, iterations = 100, rounds = 25, threads = 1,
+                    alphaStartSD = 0.001, alphaEndSD = 0.001,
+                    weightStartSD = 0.0001, weightEndSD = 0.0001,
+                    minDelta = 0.001,
+                    populationError = FALSE) {
   
   ## Pull out the reference PCs
   referenceFAM = fam[fam[ , 'population'] %in% referencePops , ]
@@ -212,27 +211,31 @@ rye.optimize = function(X = NULL, fam = NULL,
   if (is.null(weight)) {
     weight = 1 / seq(ncol(X))
   }
-  
+
   allErrors = c()
+  allAlpha = c()
+  allWeight = c()
   
   for (round in seq(rounds)) {
-    
-    sd = startSD - (startSD - endSD) * log(round)/log(rounds)
+
+    alphaSD = alphaStartSD - (alphaStartSD - alphaEndSD) * log(round)/log(rounds)
+    weightSD = weightStartSD - (weightStartSD - weightEndSD) * log(round)/log(rounds)
     if (threads > 1) {
       params = mclapply(seq(attempts), function(i) rye.gibbs(X = referenceX, fam = referenceFAM, referenceGroups = referenceGroups,
-                                                            iterations = iterations,
-                                                            alpha = alpha, weight = weight, sd = sd,
-                                                            optimizeAlpha = optimizeAlpha, optimizeWeight = optimizeWeight), mc.cores = threads)
+                                                             iterations = iterations,
+                                                             alpha = alpha, weight = weight,
+                                                             alphaSD = alphaSD, weightSD = weightSD,
+                                                             optimizeAlpha = optimizeAlpha, optimizeWeight = optimizeWeight), mc.cores = threads)
     } else {
       params = lapply(seq(attempts), function(i) rye.gibbs(X = referenceX, fam = referenceFAM, referenceGroups = referenceGroups,
-                                                          iterations = iterations,
-                                                          alpha = alpha, weight = weight, sd = sd,
-                                                          optimizeAlpha = optimizeAlpha, optimizeWeight = optimizeWeight))
+                                                           iterations = iterations,
+                                                           alpha = alpha, weight = weight,
+                                                           alphaSD = alphaSD, weightSD = weightSD,
+                                                           optimizeAlpha = optimizeAlpha, optimizeWeight = optimizeWeight))
     } 
-    
-    
     errors = unlist(lapply(params, function(i) i[[1]]))
-    
+
+      
     bestError = which.min(errors)
     meanError = mean(errors)
     progressmsg(paste0('Round ', round, '/', rounds, ' Mean error: ', sprintf("%.6f", meanError),
@@ -243,17 +246,20 @@ rye.optimize = function(X = NULL, fam = NULL,
     weight = bestParams[[3]]
     
     allErrors = c(allErrors, errors[bestError])
-    
+    allAlpha = rbind(allAlpha, alpha)
+    allWeight = rbind(allWeight, weight)
+      
     ## See if our error hasn't decreased substantially in 5 rounds
     if (round > 5) {
       errorChange = allErrors[(round - 5):round]
       errorChange = max(errorChange) - min(errorChange)
-      if (errorChange <= 0.000025) {
+      if (errorChange <= minDelta) {
         break
       }
     }
-    
   }
+
+  bestParams = c(bestParams, list(allErrors, allAlpha, allWeight))
   
   return(bestParams)
 }
@@ -289,8 +295,12 @@ rye = function(eigenvec_file = NULL, eigenval_file = NULL,
   
   ## Weight the PCs by their eigenvalues
   logmsg("Weighting PCs")
-  weight = fullEigenVal / max(fullEigenVal)
-  
+#  weight = fullEigenVal / max(fullEigenVal)
+
+  ## Or uniform weights
+  unifWeight = rep(1, pcs)
+  unifWeight = unifWeight / sum(unifWeight)
+    
   ## Using each region as a population, e.g., combine British and French to WesternEuropean
   logmsg("Aggregating individuals to population groups")
   regionFAM = fam
@@ -301,15 +311,17 @@ rye = function(eigenvec_file = NULL, eigenval_file = NULL,
   
   ## Optimize estimates using NNLS
   logmsg("Optimizing estimates using NNLS")
-  scaledWeight = weight[seq(pcs)]
-  unifAlpha = rep(0.001, length(referencePops))
+
+  unifAlpha = rep(0.01, length(referencePops))
   names(unifAlpha) = referencePops
+    
   optParams = rye.optimize(X = fullPCA[,seq(pcs)], fam = regionFAM,
                            referencePops = referencePops, referenceGroups = referenceGroups,
-                           startSD = 0.01, endSD = 0.005,
+                           alphaStartSD = 0.01, alphaEndSD = 0.001,
+                           weightStartSD = 0.001, weightEndSD = 0.0001, minDelta = 0.00001,
                            threads = threads, iterations = optim_iter,
                            rounds = optim_rounds, attempts=attempts,
-                           weight = scaledWeight, alpha = unifAlpha, 
+                           weight = unifWeight, alpha = unifAlpha, 
                            optimizeWeight = TRUE, optimizeAlpha = TRUE)
   optWeight = optParams[[3]]
   optMeans = optParams[[4]]
