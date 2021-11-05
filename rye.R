@@ -417,7 +417,7 @@ opt = parse_args(optParser)
 #                                      "--eigenval=extractedChrAllPrunedNoSan.25.eigenval",
 #                                      "--pop2group=pop2group.txt"))
 # print(opt)
-start_time <- proc.time()
+start_time <- Sys.time()
 logmsg("Parsing user supplied arguments...")
 validate_arguments(opt)
 logmsg("Arguments passed validation")
@@ -432,6 +432,6 @@ rye(eigenvec_file = opt$eigenvec,
     optim_rounds = opt$rounds,
     optim_iter = opt$iter)
 logmsg("Process completed")
-end_time <- proc.time() - start_time
-logmsg(end_time)
-logmsg(paste0("The process took ", pretty_time(end_time["user.self"])))
+end_time <- Sys.time() - start_time
+#print(end_time)
+logmsg(paste0("The process took ", pretty_time(end_time)))
