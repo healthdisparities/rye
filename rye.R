@@ -432,6 +432,6 @@ rye(eigenvec_file = opt$eigenvec,
     optim_rounds = opt$rounds,
     optim_iter = opt$iter)
 logmsg("Process completed")
-end_time <- Sys.time() - start_time
+end_time <- difftime(Sys.time(), start_time, units = "secs")
 #print(end_time)
 logmsg(paste0("The process took ", pretty_time(end_time)))
