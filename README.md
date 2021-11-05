@@ -9,7 +9,7 @@ Testers: Lavanya Rishishwar, Shivam Sharma, Emily Norris
 We are working on improving the user experience with Rye.  This section will be updated in near future with easier installation procedure for pastrami and it's dependencies.  
 
 ### Dependencies
-Pastrami requires the following OS/programs/modules to run:
+Rye requires the following OS/programs/modules to run:
 * Linux/Mac OS - tested on RedHat OS, expected to run on Mac environments, will possibly work on WSL and Windows; though Mac, WSL, and Windows haven't been tested so far
 * R - tested on several versions between 3.5.1 and 4.X.X
 * R libraries = nnls, Hmisc, parallel, optparse, and crayon
