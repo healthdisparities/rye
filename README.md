@@ -1,7 +1,7 @@
 <h1 align="center">
     <img src="logo/logo.png" height="100">Rye
 </h1>
-Rye is a large scale global ancestry inference algorithm that works from principal component analysis (PCA) data.  The PCA data (eigenvector and eigenvalue) reduces the massive genomic scale comparison to a much smaller matrix solving problem which is solved by using non-negative least square (NNLS) optimization.  
+Rye (<b>R</b>apid ancestr<b>Y</b> <b>E</b>stimation) is a large scale global ancestry inference algorithm that works from principal component analysis (PCA) data.  The PCA data (eigenvector and eigenvalue) reduces the massive genomic scale comparison to a much smaller matrix solving problem which is solved by using non-negative least square (NNLS) optimization.  
   
 Codebase stage: development  
 Developers and maintainers: Andrew Conley, Lavanya Rishishwar, Shivam Sharma  
