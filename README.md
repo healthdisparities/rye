@@ -192,3 +192,6 @@ Rye currently supports the following options for fine tuning of the results:
 In our experience, the top 20 PCs are usually sufficient for assessing accurate results.  The more the number of PCs, the better the result.  There is a point of diminishing returns as later PCs explain very little of the total variance - we haven't tested this out thoroughly.
 
 Rounds, iterations, and attempts control how many times Rye will try to identify the most optimal parameters sets (i.e., the weights and shrinkage).  Generally speaking, the longer you let this process run, the more likely we are to stumble upon the most optimal value.  We recommend users to start with a short run (i.e., small rounds, iterations and attempts) to get a sense of the ancestry prediction data and runtime of the software and then increase these values to higher numbers (e.g., 100-200 range) for a more accurate run.
+
+## Publications
+Andrew B. Conley, Lavanya Rishishwar, Maria Ahmad, Shivam Sharma, Emily T. Norris, I. King Jordan, Leonardo Mariño-Ramírez (2022) Rye: genetic ancestry inference at biobank scale. https://doi.org/10.1101/2022.04.15.488477
