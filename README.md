@@ -195,4 +195,4 @@ Rounds, iterations, and attempts control how many times Rye will try to identify
 
 ## Publications
 
-Conley AB, Rishishwar L, Ahmad M, Sharma S, Norris ET, Jordan I, Mariño-Ramírez L. Rye: genetic ancestry inference at biobank scale. Nucleic Acids Res. 2023. gkad149. doi: 10.1093/nar/gkad149 [PubMed]([https://www.genome.gov/](https://pubmed.ncbi.nlm.nih.gov/36928108/])
+Conley AB, Rishishwar L, Ahmad M, Sharma S, Norris ET, Jordan I, Mariño-Ramírez L. Rye: genetic ancestry inference at biobank scale. Nucleic Acids Res. 2023. gkad149. doi: 10.1093/nar/gkad149 [PubMed]([https://pubmed.ncbi.nlm.nih.gov/36928108/])
