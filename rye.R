@@ -220,14 +220,14 @@ rye.optimize = function(X = NULL, fam = NULL,
     sd = startSD - (startSD - endSD) * log(round)/log(rounds)
     if (threads > 1) {
       params = mclapply(seq(attempts), function(i) rye.gibbs(X = referenceX, fam = referenceFAM, referenceGroups = referenceGroups,
-                                                            iterations = iterations,
-                                                            alpha = alpha, weight = weight, sd = sd,
-                                                            optimizeAlpha = optimizeAlpha, optimizeWeight = optimizeWeight), mc.cores = threads)
+                                                             iterations = iterations,
+                                                             alpha = alpha, weight = weight, sd = sd,
+                                                             optimizeAlpha = optimizeAlpha, optimizeWeight = optimizeWeight), mc.cores = threads)
     } else {
       params = lapply(seq(attempts), function(i) rye.gibbs(X = referenceX, fam = referenceFAM, referenceGroups = referenceGroups,
-                                                          iterations = iterations,
-                                                          alpha = alpha, weight = weight, sd = sd,
-                                                          optimizeAlpha = optimizeAlpha, optimizeWeight = optimizeWeight))
+                                                           iterations = iterations,
+                                                           alpha = alpha, weight = weight, sd = sd,
+                                                           optimizeAlpha = optimizeAlpha, optimizeWeight = optimizeWeight))
     } 
     
     
@@ -236,7 +236,7 @@ rye.optimize = function(X = NULL, fam = NULL,
     bestError = which.min(errors)
     meanError = mean(errors)
     progressmsg(paste0('Round ', round, '/', rounds, ' Mean error: ', sprintf("%.6f", meanError),
-               ', Best error: ', sprintf('%.6f', errors[bestError])))
+                       ', Best error: ', sprintf('%.6f', errors[bestError])))
     
     bestParams = params[[bestError]]
     alpha = bestParams[[2]]
@@ -261,16 +261,27 @@ rye.optimize = function(X = NULL, fam = NULL,
 rye = function(eigenvec_file = NULL, eigenval_file = NULL,
                pop2group_file = NULL, output_file = NULL,
                threads = 4, pcs = 20, optim_rounds = 200,
-               optim_iter = 100, attempts=4){
+               optim_iter = 100, attempts=4, sep="\t"){
   ## Perform core operation
   #TODO: Change file reading method to data.table
   logmsg("Reading in Eigenvector file")
   fullPCA = read.table(eigenvec_file, header = FALSE, row.names = NULL)
   rownames(fullPCA) = fullPCA[ , 2]
+  if(! is.numeric(fullPCA)){
+    cat("Eigenvector file was not read as numeric - please make sure there are no stragglers in the file")
+    quit(status = 1)
+  }
   logmsg("Reading in Eigenvalue file")
   fullEigenVal = read.table(eigenval_file, header = FALSE, row.names = NULL)[,1]
+  
   logmsg("Reading in pop2group file")
-  pop2group = read.table(pop2group_file, header = T, stringsAsFactors = F)
+  pop2group = read.table(pop2group_file, header = T, stringsAsFactors = F, 
+                         sep = sep)
+  if(!("Pop" %in% colnames(pop2group)) | !("Group" %in% )){
+    cat("Errr... 'Pop' and 'Group' columns not found in the file header, 
+        please make sure your pop2group file contains them")
+    quit(status = 1)
+  }
   referenceGroups = pop2group$Group
   names(referenceGroups) = pop2group$Pop
   
@@ -407,7 +418,9 @@ optionList = list(
               help = 'Number of iterations to use for optimization (higher number = more accurate but slower; Default=100)',
               metavar = '<optim-iters>'),
   make_option('--attempts', type = 'numeric', default = 4,
-              help = 'Number of attempts to find the optimum values (Default = 4)', metavar = '<ATTEMPTS>')
+              help = 'Number of attempts to find the optimum values (Default = 4)', metavar = '<ATTEMPTS>'),
+  make_option('--sep', type = 'character', default = "\t",
+              help = 'Separator of population and group values (Default = \t)', metavar = '<SEP>')
 )
 
 optParser = OptionParser(option_list = optionList)
@@ -430,7 +443,8 @@ rye(eigenvec_file = opt$eigenvec,
     attempts = opt$attempts,
     pcs = opt$pcs,
     optim_rounds = opt$rounds,
-    optim_iter = opt$iter)
+    optim_iter = opt$iter,
+    sep = opt$sep)
 logmsg("Process completed")
 end_time <- difftime(Sys.time(), start_time, units = "secs")[[1]]
 #print(end_time)
