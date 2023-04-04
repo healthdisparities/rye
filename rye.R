@@ -220,14 +220,14 @@ rye.optimize = function(X = NULL, fam = NULL,
     sd = startSD - (startSD - endSD) * log(round)/log(rounds)
     if (threads > 1) {
       params = mclapply(seq(attempts), function(i) rye.gibbs(X = referenceX, fam = referenceFAM, referenceGroups = referenceGroups,
-                                                             iterations = iterations,
-                                                             alpha = alpha, weight = weight, sd = sd,
-                                                             optimizeAlpha = optimizeAlpha, optimizeWeight = optimizeWeight), mc.cores = threads)
+                                                            iterations = iterations,
+                                                            alpha = alpha, weight = weight, sd = sd,
+                                                            optimizeAlpha = optimizeAlpha, optimizeWeight = optimizeWeight), mc.cores = threads)
     } else {
       params = lapply(seq(attempts), function(i) rye.gibbs(X = referenceX, fam = referenceFAM, referenceGroups = referenceGroups,
-                                                           iterations = iterations,
-                                                           alpha = alpha, weight = weight, sd = sd,
-                                                           optimizeAlpha = optimizeAlpha, optimizeWeight = optimizeWeight))
+                                                          iterations = iterations,
+                                                          alpha = alpha, weight = weight, sd = sd,
+                                                          optimizeAlpha = optimizeAlpha, optimizeWeight = optimizeWeight))
     } 
     
     
@@ -236,7 +236,7 @@ rye.optimize = function(X = NULL, fam = NULL,
     bestError = which.min(errors)
     meanError = mean(errors)
     progressmsg(paste0('Round ', round, '/', rounds, ' Mean error: ', sprintf("%.6f", meanError),
-                       ', Best error: ', sprintf('%.6f', errors[bestError])))
+               ', Best error: ', sprintf('%.6f', errors[bestError])))
     
     bestParams = params[[bestError]]
     alpha = bestParams[[2]]
@@ -267,13 +267,8 @@ rye = function(eigenvec_file = NULL, eigenval_file = NULL,
   logmsg("Reading in Eigenvector file")
   fullPCA = read.table(eigenvec_file, header = FALSE, row.names = NULL)
   rownames(fullPCA) = fullPCA[ , 2]
-  if(! is.numeric(fullPCA)){
-    cat("Eigenvector file was not read as numeric - please make sure there are no stragglers in the file")
-    quit(status = 1)
-  }
   logmsg("Reading in Eigenvalue file")
   fullEigenVal = read.table(eigenval_file, header = FALSE, row.names = NULL)[,1]
-  
   logmsg("Reading in pop2group file")
   pop2group = read.table(pop2group_file, header = T, stringsAsFactors = F, 
                          sep = sep)
@@ -296,6 +291,10 @@ rye = function(eigenvec_file = NULL, eigenval_file = NULL,
   logmsg("Scaling PCs")
   fullPCA = fullPCA[ , 3:ncol(fullPCA)]
   fullPCA = as.matrix(fullPCA)
+  if(! is.numeric(fullPCA)){
+    cat("Eigenvector file was not read as numeric - please make sure there are no stragglers in the file")
+    quit(status = 1)
+  }
   fullPCA = rye.scale(fullPCA)
   
   ## Weight the PCs by their eigenvalues
